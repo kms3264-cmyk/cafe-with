@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>관리자 모드</title>
+<style>
+  :root {
+    --bg: #f4efe7; --card: #ffffff; --ink: #2e2019; --soft: #5f4c40; --line: #d9cbb8; --field: #b9a78f;
+    --brand: #5b3a29; --brand-ink: #ffffff; --tint: #f1e6d6; --good: #17663a; --good-bg: #e3f3e8;
+    --bad: #a3231b; --bad-bg: #fbe9e7; --focus: #0b57d0;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink); line-height: 1.6; word-break: keep-all;
+    font-family: "Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", system-ui, sans-serif;
+  }
+  .wrap { max-width: 60rem; margin: 0 auto; padding: 1.25rem 1rem 3rem; }
+  header { display: flex; align-items: center; gap: .75rem; flex-wrap: wrap; margin-bottom: 1rem; }
+  h1 { font-size: 1.6rem; margin: 0; outline: none; }
+  h2 { font-size: 1.2rem; margin: 0 0 .75rem; }
+  h3 { font-size: 1.05rem; margin: 0 0 .5rem; }
+  p { margin: 0 0 .75rem; }
+  .badge { font-size: .9rem; font-weight: 700; padding: .15rem .6rem; border-radius: 999px; border: 2px solid; }
+  .badge.on { color: var(--good); background: var(--good-bg); }
+  .badge.off { color: var(--soft); background: var(--card); }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 1rem; margin-bottom: 1rem; }
+  .tabs { display: flex; gap: .4rem; flex-wrap: wrap; margin-bottom: 1rem; }
+  .tabs button {
+    min-height: 44px; padding: .3rem 1rem; font: inherit; font-weight: 700; color: var(--ink);
+    background: var(--card); border: 2px solid var(--line); border-radius: 10px; cursor: pointer;
+  }
+  .tabs button[aria-selected="true"] { color: var(--brand-ink); background: var(--brand); border-color: var(--brand); }
+  button.btn, a.btn {
+    display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: .35rem 1rem;
+    font: inherit; font-weight: 700; color: var(--brand-ink); background: var(--brand); border: 2px solid var(--brand);
+    border-radius: 10px; cursor: pointer; text-decoration: none;
+  }
+  button.ghost { color: var(--ink); background: var(--card); border-color: var(--field); }
+  button.danger { color: #fff; background: var(--bad); border-color: var(--bad); }
+  button.small { min-height: 36px; padding: .15rem .6rem; font-size: .9rem; }
+  button:disabled { opacity: .55; cursor: wait; }
+  :focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+  label { display: block; font-weight: 700; margin: 0 0 .25rem; }
+  input, textarea, select {
+    width: 100%; min-height: 44px; padding: .4rem .6rem; font: inherit; color: var(--ink);
+    background: #fff; border: 2px solid var(--field); border-radius: 10px;
+  }
+  textarea { resize: vertical; }
+  .row { display: flex; gap: .5rem; flex-wrap: wrap; align-items: flex-end; }
+  .grow { flex: 1 1 14rem; }
+  .narrow { flex: 0 0 6rem; }
+  .field { margin-bottom: .6rem; }
+  .note { color: var(--soft); font-size: .92rem; }
+  .msg { font-weight: 700; margin: .5rem 0 0; }
+  .msg.ok { color: var(--good); } .msg.bad { color: var(--bad); }
+  .nums { display: grid; grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr)); gap: .6rem; margin-bottom: 1rem; }
+  .nums div { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: .75rem; text-align: center; }
+  .nums b { display: block; font-size: 2rem; line-height: 1.2; }
+  table { width: 100%; border-collapse: collapse; font-size: .95rem; }
+  th, td { text-align: left; padding: .45rem .4rem; border-bottom: 1px solid #e5d9c8; vertical-align: middle; }
+  th { color: var(--soft); font-size: .9rem; }
+  .bar { display: flex; align-items: center; gap: .5rem; min-width: 9rem; }
+  .bar span { flex: 1; height: .7rem; background: var(--tint); border-radius: 999px; overflow: hidden; }
+  .bar i { display: block; height: 100%; background: var(--brand); }
+  .tag { font-weight: 700; }
+  .tag.used { color: var(--soft); } .tag.open { color: var(--good); }
+  fieldset.q { border: 1px solid var(--line); border-radius: 14px; padding: .75rem 1rem 1rem; margin: 0 0 1rem; background: var(--card); }
+  fieldset.q legend { font-weight: 800; padding: 0 .35rem; }
+  .tablewrap { overflow-x: auto; }
+
+  .sheets { display: flex; flex-direction: column; align-items: center; gap: 1rem; }
+  .poster {
+    width: 210mm; height: 297mm; max-width: 100%; background: #fff; color: #000; overflow: hidden;
+    padding: 16mm; display: flex; flex-direction: column; align-items: center; text-align: center; border: 1px solid var(--line);
+  }
+  .poster .top { font-size: 24pt; font-weight: 800; }
+  .poster .num { margin-top: 6mm; font-size: 22pt; font-weight: 700; }
+  .poster .place { font-size: 50pt; font-weight: 800; line-height: 1.25; }
+  .poster .qr { width: 130mm; max-width: 100%; margin: 6mm 0; }
+  .poster .qr svg { display: block; width: 100%; height: auto; }
+  .poster .say { font-size: 26pt; font-weight: 800; line-height: 1.35; }
+  .poster .code { margin-top: 5mm; font-size: 18pt; }
+  .poster .code b { font-size: 26pt; letter-spacing: .12em; }
+  .poster .foot { margin-top: auto; font-size: 16pt; font-weight: 700; }
+  @page { size: A4; margin: 0; }
+  @media print {
+    body { background: #fff; }
+    .wrap > *:not(#panel), #panel > *:not(.sheets) { display: none !important; }
+    .wrap { max-width: none; padding: 0; }
+    .sheets { display: block; }
+    .poster { border: 0; max-width: none; break-after: page; page-break-after: always; }
+    .poster:last-child { break-after: auto; page-break-after: auto; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1 tabindex="-1">관리자 모드</h1>
+    <span class="badge" id="mode"></span>
+  </header>
+  <div class="tabs" role="tablist" id="tabs" hidden></div>
+  <main id="panel"></main>
+</div>
+
+<script src="config.js"></script>
+<script src="qr.js"></script>
+<script>
+(function () {
+  var C0 = window.CONFIG, API = String(C0.apiUrl || "").trim();
+  var panel = document.getElementById("panel"), tabsEl = document.getElementById("tabs");
+  var PIN_KEY = "bf-admin-pin", BASE_KEY = "bf-quest-base";
+  var pin = "", staffPin = "", content = null, draft = null, timer = null, current = "stats";
+  var TABS = [["stats", "참여 현황"], ["coupons", "쿠폰 관리"], ["edit", "문제 수정"], ["qr", "QR 인쇄"], ["etc", "초기화"]];
+  var CODE_CHARS = "ACDEFHJKLMNPQRTUVWXY3479";
+
+  function esc(s) {
+    return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+  function clone(o) { return JSON.parse(JSON.stringify(o)); }
+  function ss(k, v) { try { if (v === undefined) return sessionStorage.getItem(k); if (v === null) sessionStorage.removeItem(k); else sessionStorage.setItem(k, v); } catch (e) {} return null; }
+  function ls(k, v) { try { if (v === undefined) return localStorage.getItem(k); if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch (e) {} return null; }
+  function time(ms) {
+    return ms ? new Date(ms).toLocaleString("ko-KR", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" }) : "";
+  }
+  function fromConfig() {
+    return clone({ eventTitle: C0.eventTitle, cafeName: C0.cafeName, coupons: C0.coupons, stations: C0.stations });
+  }
+  function post(body) {
+    var ctrl = window.AbortController ? new AbortController() : null;
+    var t = setTimeout(function () { if (ctrl) ctrl.abort(); }, 20000);
+    return fetch(API, { method: "POST", body: JSON.stringify(body), signal: ctrl ? ctrl.signal : undefined })
+      .then(function (r) { clearTimeout(t); return r.json(); }, function (e) { clearTimeout(t); throw e; });
+  }
+  function admin(op, extra) {
+    var b = { action: "admin", pin: pin, op: op };
+    for (var k in extra) b[k] = extra[k];
+    return post(b);
+  }
+  function errText(res, fallback) {
+    if (res && res.error === "wrong_pin") return "관리자 비밀번호가 맞지 않아요.";
+    if (res && res.message) return res.message;
+    return fallback || "서버에 연결하지 못했어요. 인터넷과 서버 주소를 확인해 주세요.";
+  }
+  function setMsg(id, text, ok) {
+    var el = document.getElementById(id);
+    if (el) { el.textContent = text; el.className = "msg " + (ok ? "ok" : "bad"); }
+  }
+
+  /* ---------- 로그인 ---------- */
+  function showLogin(message) {
+    tabsEl.hidden = true;
+    panel.innerHTML = '<section class="card" style="max-width:26rem"><h2>관리자 로그인</h2>' +
+      '<form id="login"><label for="pinIn">관리자 비밀번호</label>' +
+      '<input id="pinIn" type="password" inputmode="numeric" autocomplete="current-password">' +
+      '<p class="msg bad" id="loginMsg" role="alert">' + esc(message || "") + "</p>" +
+      '<button class="btn" type="submit">들어가기</button></form>' +
+      '<p class="note" style="margin:.75rem 0 0">비밀번호는 구글 시트의 ‘설정’ 탭에 있어요.</p></section>';
+    document.getElementById("pinIn").focus();
+    document.getElementById("login").addEventListener("submit", function (e) {
+      e.preventDefault();
+      var btn = this.querySelector("button");
+      btn.disabled = true;
+      login(document.getElementById("pinIn").value).then(function (msg) {
+        btn.disabled = false;
+        if (msg) setMsg("loginMsg", msg, false);
+      });
+    });
+  }
+  function login(p) {
+    pin = p;
+    return admin("login").then(function (res) {
+      if (!res.ok) { ss(PIN_KEY, null); return errText(res); }
+      ss(PIN_KEY, p);
+      staffPin = res.staffPin || "";
+      content = res.content && res.content.stations && res.content.stations.length ? res.content : null;
+      startTabs();
+      return "";
+    }, function () { return errText(null); });
+  }
+
+  /* ---------- 탭 ---------- */
+  function startTabs() {
+    tabsEl.hidden = false;
+    tabsEl.innerHTML = TABS.map(function (t) {
+      return '<button type="button" role="tab" data-tab="' + t[0] + '">' + t[1] + "</button>";
+    }).join("");
+    tabsEl.addEventListener("click", function (e) {
+      var b = e.target.closest("button[data-tab]");
+      if (b) show(b.getAttribute("data-tab"));
+    });
+    show(API && content ? "stats" : "edit");
+  }
+  function show(tab) {
+    current = tab;
+    clearInterval(timer);
+    panel.onclick = panel.oninput = panel.onchange = null;
+    Array.prototype.forEach.call(tabsEl.children, function (b) {
+      b.setAttribute("aria-selected", String(b.getAttribute("data-tab") === tab));
+    });
+    ({ stats: renderStats, coupons: renderCoupons, edit: renderEdit, qr: renderQR, etc: renderEtc })[tab]();
+  }
+  function needServer() {
+    panel.innerHTML = '<section class="card"><h2>서버 연결이 필요해요</h2>' +
+      "<p>참여 현황과 쿠폰 관리는 여러 휴대폰의 기록을 모아야 해서 구글 시트 서버를 연결해야 쓸 수 있어요.</p>" +
+      '<p style="margin:0">연결 방법은 <a href="설치_안내.html">설치 안내</a>를 봐 주세요.</p></section>';
+  }
+  function live() { return content || fromConfig(); }
+
+  /* ---------- 참여 현황 ---------- */
+  function renderStats() {
+    if (!API) return needServer();
+    panel.innerHTML = '<div id="statsBox"><p>불러오는 중이에요…</p></div>';
+    var load = function () {
+      admin("stats").then(function (res) {
+        if (current !== "stats") return;
+        if (!res.ok) { document.getElementById("statsBox").innerHTML = '<p class="msg bad">' + esc(errText(res)) + "</p>"; return; }
+        drawStats(res);
+      }, function () {
+        var box = document.getElementById("statsBox");
+        if (box && current === "stats") box.insertAdjacentHTML("afterbegin", '<p class="msg bad">' + esc(errText(null)) + "</p>");
+      });
+    };
+    load();
+    timer = setInterval(load, 15000);
+  }
+  function drawStats(s) {
+    var rows = live().stations.map(function (st, i) {
+      var p = s.perCode[st.code] || { tries: 0, correct: 0 };
+      var rate = p.tries ? Math.round(p.correct * 100 / p.tries) : 0;
+      return "<tr><td>" + (i + 1) + "</td><td>" + esc(st.place) + "</td><td>" + p.tries + "명</td><td>" + p.correct + "명</td>" +
+        '<td><div class="bar"><span><i style="width:' + rate + '%"></i></span><b>' + (p.tries ? rate + "%" : "-") + "</b></div></td></tr>";
+    }).join("");
+    document.getElementById("statsBox").innerHTML =
+      '<div class="nums"><div><b>' + s.players + "</b>참여한 학생</div><div><b>" + s.answered + "</b>푼 문제(누적)</div>" +
+      "<div><b>" + s.issued + "</b>발급한 쿠폰</div><div><b>" + s.used + "</b>사용한 쿠폰</div></div>" +
+      '<section class="card"><h2>문제별 결과</h2><div class="tablewrap"><table><thead><tr><th>번호</th><th>장소</th><th>푼 학생</th><th>맞힌 학생</th><th>정답률</th></tr></thead>' +
+      "<tbody>" + rows + "</tbody></table></div></section>" +
+      '<p class="note">15초마다 자동으로 새로고침해요. 마지막 확인: ' + time(s.at) + "</p>";
+  }
+
+  /* ---------- 쿠폰 관리 ---------- */
+  var couponFilter = "all";
+  function renderCoupons() {
+    if (!API) return needServer();
+    panel.innerHTML =
+      '<section class="card"><h2>쿠폰 사용 처리</h2><form id="redeem"><div class="row">' +
+      '<div class="grow"><label for="noIn">쿠폰 번호</label><input id="noIn" autocomplete="off" placeholder="예: W1234" style="text-transform:uppercase"></div>' +
+      '<button class="btn" type="submit">사용 처리</button></div><p class="msg" id="redeemMsg" role="status"></p></form></section>' +
+      '<section class="card"><div class="row" style="justify-content:space-between;margin-bottom:.5rem"><h2 style="margin:0">쿠폰 목록</h2>' +
+      '<div class="row" role="group" aria-label="보기 선택">' +
+      ["all:전체", "open:안 쓴 쿠폰", "used:쓴 쿠폰"].map(function (x) {
+        var k = x.split(":");
+        return '<button type="button" class="small ' + (couponFilter === k[0] ? "btn" : "btn ghost") + '" data-filter="' + k[0] + '">' + k[1] + "</button>";
+      }).join("") + "</div></div><div id=\"couponList\"><p>불러오는 중이에요…</p></div></section>";
+
+    panel.querySelectorAll("[data-filter]").forEach(function (b) {
+      b.addEventListener("click", function () { couponFilter = b.getAttribute("data-filter"); renderCoupons(); });
+    });
+    document.getElementById("redeem").addEventListener("submit", function (e) {
+      e.preventDefault();
+      var no = document.getElementById("noIn").value.trim().toUpperCase();
+      if (no) redeem(no);
+    });
+    panel.querySelector("#couponList").addEventListener("click", function (e) {
+      var b = e.target.closest("button[data-no]");
+      if (b) redeem(b.getAttribute("data-no"));
+    });
+    var load = function () {
+      admin("stats").then(function (res) {
+        if (current !== "coupons") return;
+        var box = document.getElementById("couponList");
+        if (!res.ok) { box.innerHTML = '<p class="msg bad">' + esc(errText(res)) + "</p>"; return; }
+        var list = res.coupons.filter(function (c) {
+          return couponFilter === "all" || (couponFilter === "used" ? c.usedAt : !c.usedAt);
+        });
+        box.innerHTML = list.length ? '<div class="tablewrap"><table><thead><tr><th>쿠폰 번호</th><th>쿠폰</th><th>맞힌 수</th><th>받은 시간</th><th>상태</th></tr></thead><tbody>' +
+          list.map(function (c) {
+            return "<tr><td><b>" + esc(c.no) + "</b></td><td>" + esc(c.tierName) + "<br><span class=\"note\">" + esc(c.benefit) + "</span></td><td>" + c.correct + "개</td><td>" + time(c.issuedAt) + "</td><td>" +
+              (c.usedAt ? '<span class="tag used">사용함 · ' + time(c.usedAt) + "</span>" :
+                '<span class="tag open">사용 전</span> <button type="button" class="btn small" data-no="' + esc(c.no) + '">사용 처리</button>') + "</td></tr>";
+          }).join("") + "</tbody></table></div>" : "<p>해당하는 쿠폰이 없어요.</p>";
+      }, function () {});
+    };
+    load();
+    timer = setInterval(load, 15000);
+    renderCoupons.reload = load;
+  }
+  function redeem(no) {
+    setMsg("redeemMsg", "처리하는 중이에요…", true);
+    admin("redeem", { no: no }).then(function (res) {
+      if (res.ok) { setMsg("redeemMsg", no + " 쿠폰을 사용 처리했어요. (" + res.coupon.tierName + ")", true); document.getElementById("noIn").value = ""; }
+      else if (res.error === "used") setMsg("redeemMsg", no + " 쿠폰은 이미 " + time(res.coupon.usedAt) + "에 사용했어요.", false);
+      else if (res.error === "no_coupon") setMsg("redeemMsg", no + " 번호의 쿠폰이 없어요. 번호를 다시 확인해 주세요.", false);
+      else setMsg("redeemMsg", errText(res), false);
+      renderCoupons.reload();
+    }, function () { setMsg("redeemMsg", errText(null), false); });
+  }
+
+  /* ---------- 문제 수정 ---------- */
+  function newCode(taken) {
+    for (;;) {
+      var c = "";
+      for (var i = 0; i < 4; i++) c += CODE_CHARS[Math.floor(Math.random() * CODE_CHARS.length)];
+      if (!taken[c]) return c;
+    }
+  }
+  function renderEdit() {
+    if (!draft) draft = clone(live());
+    var d = draft;
+    var coupons = d.coupons.map(function (t, i) {
+      return '<div class="row field" data-ci="' + i + '">' +
+        '<div class="narrow"><label>아이콘</label><input data-k="icon" value="' + esc(t.icon) + '"></div>' +
+        '<div class="grow"><label>쿠폰 이름</label><input data-k="name" value="' + esc(t.name) + '"></div>' +
+        '<div class="grow"><label>혜택</label><input data-k="benefit" value="' + esc(t.benefit) + '"></div>' +
+        '<div class="narrow"><label>맞힌 수</label><input data-k="min" type="number" min="1" value="' + esc(t.min) + '"></div>' +
+        (d.coupons.length > 1 ? '<button type="button" class="ghost small btn" data-act="delCoupon">삭제</button>' : "") + "</div>";
+    }).join("");
+    var qs = d.stations.map(function (s, i) {
+      var opts = s.choices.map(function (_, j) {
+        return '<option value="' + (j + 1) + '"' + (Number(s.answer) === j + 1 ? " selected" : "") + ">" + (j + 1) + "번</option>";
+      }).join("");
+      return '<fieldset class="q" data-si="' + i + '"><legend>' + (i + 1) + "번 문제 · 코드 " + esc(s.code) + "</legend>" +
+        '<div class="row field"><div class="grow"><label>장소</label><input data-k="place" value="' + esc(s.place) + '"></div>' +
+        '<div class="narrow"><label>아이콘</label><input data-k="icon" value="' + esc(s.icon) + '"></div></div>' +
+        '<div class="field"><label>문제</label><textarea data-k="question" rows="2">' + esc(s.question) + "</textarea></div>" +
+        '<div class="row field"><div class="grow"><label>보기 (한 줄에 하나씩, 2~5개)</label><textarea data-k="choices" rows="4">' + esc(s.choices.join("\n")) + "</textarea>" +
+        '<p class="note" style="margin:.25rem 0 0">O/X 문제는 ‘맞아요 (O)’, ‘아니에요 (X)’ 두 줄로 적어 주세요.</p></div>' +
+        '<div class="narrow"><label>정답</label><select data-k="answer">' + opts + "</select></div></div>" +
+        '<div class="field"><label>해설</label><textarea data-k="explain" rows="2">' + esc(s.explain) + "</textarea></div>" +
+        '<div class="row"><button type="button" class="btn ghost small" data-act="up"' + (i === 0 ? " disabled" : "") + ">위로</button>" +
+        '<button type="button" class="btn ghost small" data-act="down"' + (i === d.stations.length - 1 ? " disabled" : "") + ">아래로</button>" +
+        '<button type="button" class="btn ghost small" data-act="del">이 문제 삭제</button></div></fieldset>';
+    }).join("");
+
+    panel.innerHTML =
+      '<section class="card"><h2>저장하기</h2>' +
+      (API && !content ? '<p class="msg bad" style="margin:0 0 .75rem">서버에 아직 문제가 없어요. 아래 내용을 확인하고 ‘서버에 저장’을 한 번 눌러 주세요. 저장하기 전에는 학생이 쿠폰을 받을 수 없어요.</p>' : "") +
+      (API ?"<p>저장하면 학생 휴대폰에 바로 반영돼요. 문제를 새로 만들거나 지우면 QR 포스터를 다시 인쇄해 주세요.</p>"
+           : "<p>서버가 연결되어 있지 않아요. 고친 뒤 <b>config.js 내려받기</b>를 눌러 받은 파일로 기존 config.js를 바꿔 올려 주세요.</p>") +
+      '<div class="row">' + (API ? '<button type="button" class="btn" data-act="save">서버에 저장</button>' : "") +
+      '<button type="button" class="btn ' + (API ? "ghost" : "") + '" data-act="download">config.js 내려받기</button>' +
+      '<button type="button" class="btn ghost" data-act="revert">고친 내용 되돌리기</button></div>' +
+      '<p class="msg" id="saveMsg" role="status"></p></section>' +
+      '<section class="card"><h2>기본 정보</h2><div class="row field">' +
+      '<div class="grow"><label for="evTitle">행사 이름</label><input id="evTitle" data-top="eventTitle" value="' + esc(d.eventTitle) + '"></div>' +
+      '<div class="grow"><label for="cafe">카페 이름</label><input id="cafe" data-top="cafeName" value="' + esc(d.cafeName) + '"></div></div>' +
+      (API ? '<div class="row"><div class="grow"><label for="staffPin">바리스타 비밀번호 (숫자 4~8자리)</label><input id="staffPin" inputmode="numeric" value="' + esc(staffPin) + '"></div>' +
+        '<button type="button" class="btn ghost" data-act="staffPin">비밀번호 바꾸기</button></div><p class="msg" id="pinMsg" role="status"></p>' : "") +
+      "</section>" +
+      '<section class="card"><h2>쿠폰 기준</h2>' + coupons +
+      '<button type="button" class="btn ghost small" data-act="addCoupon">쿠폰 종류 추가</button></section>' +
+      "<h2>문제 " + d.stations.length + "개</h2>" + qs +
+      '<button type="button" class="btn" data-act="add">문제 추가</button>';
+
+    panel.oninput = panel.onchange = function (e) {
+      var el = e.target, k = el.getAttribute("data-k"), top = el.getAttribute("data-top");
+      if (top) { d[top] = el.value; return; }
+      var ci = el.closest("[data-ci]"), si = el.closest("[data-si]");
+      if (ci && k) d.coupons[ci.getAttribute("data-ci")][k] = k === "min" ? Number(el.value) : el.value;
+      if (si && k) {
+        var s = d.stations[si.getAttribute("data-si")];
+        if (k === "choices") {
+          s.choices = el.value.split("\n").map(function (x) { return x.trim(); }).filter(Boolean);
+          var sel = si.querySelector('[data-k="answer"]'), cur = Number(s.answer);
+          sel.innerHTML = s.choices.map(function (_, j) {
+            return '<option value="' + (j + 1) + '"' + (cur === j + 1 ? " selected" : "") + ">" + (j + 1) + "번</option>";
+          }).join("");
+          s.answer = Number(sel.value);
+        } else s[k] = k === "answer" ? Number(el.value) : el.value;
+      }
+    };
+    panel.onclick = function (e) {
+      var b = e.target.closest("[data-act]");
+      if (!b) return;
+      var act = b.getAttribute("data-act"), si = b.closest("[data-si]"), ci = b.closest("[data-ci]");
+      var i = si ? Number(si.getAttribute("data-si")) : -1;
+      if (act === "up" || act === "down") {
+        var j = act === "up" ? i - 1 : i + 1, t = d.stations[i];
+        d.stations[i] = d.stations[j]; d.stations[j] = t; renderEdit();
+      } else if (act === "del") {
+        if (d.stations.length > 1) { d.stations.splice(i, 1); renderEdit(); }
+      } else if (act === "add") {
+        var taken = {};
+        d.stations.forEach(function (s) { taken[s.code] = true; });
+        d.stations.push({ code: newCode(taken), place: "", icon: "❓", question: "", choices: ["맞아요 (O)", "아니에요 (X)"], answer: 1, explain: "" });
+        renderEdit();
+        var last = panel.querySelectorAll("fieldset.q");
+        last[last.length - 1].querySelector("input").focus();
+      } else if (act === "addCoupon") {
+        d.coupons.push({ id: "c" + Date.now().toString(36), min: d.stations.length, name: "", icon: "🎟️", benefit: "" }); renderEdit();
+      } else if (act === "delCoupon") {
+        d.coupons.splice(Number(ci.getAttribute("data-ci")), 1); renderEdit();
+      } else if (act === "revert") {
+        draft = null; renderEdit(); setMsg("saveMsg", "저장된 내용으로 되돌렸어요.", true);
+      } else if (act === "download") {
+        var p = check(d); if (p) return setMsg("saveMsg", p, false);
+        download(d); setMsg("saveMsg", "config.js 파일을 내려받았어요.", true);
+      } else if (act === "save") {
+        save(d, b);
+      } else if (act === "staffPin") {
+        var v = document.getElementById("staffPin").value.trim();
+        admin("setStaffPin", { staffPin: v }).then(function (res) {
+          if (res.ok) { staffPin = v; setMsg("pinMsg", "바리스타 비밀번호를 바꿨어요.", true); }
+          else setMsg("pinMsg", errText(res), false);
+        }, function () { setMsg("pinMsg", errText(null), false); });
+      }
+    };
+  }
+  function check(d) {
+    d.coupons.sort(function (a, b) { return b.min - a.min; });
+    for (var i = 0; i < d.stations.length; i++) {
+      var s = d.stations[i], n = (i + 1) + "번 문제: ";
+      if (!s.place.trim()) return n + "장소를 적어 주세요.";
+      if (!s.question.trim()) return n + "문제를 적어 주세요.";
+      if (s.choices.length < 2 || s.choices.length > 5) return n + "보기는 2~5개로 적어 주세요.";
+      if (!(s.answer >= 1 && s.answer <= s.choices.length)) return n + "정답을 골라 주세요.";
+    }
+    for (var j = 0; j < d.coupons.length; j++) {
+      var t = d.coupons[j];
+      if (!t.name.trim() || !t.benefit.trim()) return "쿠폰 이름과 혜택을 모두 적어 주세요.";
+      if (!(t.min >= 1)) return t.name + ": 맞힌 수를 1 이상으로 적어 주세요.";
+      if (t.min > d.stations.length) return t.name + ": 맞힌 수가 문제 수(" + d.stations.length + "개)보다 많아요.";
+    }
+    return "";
+  }
+  function save(d, btn) {
+    var p = check(d);
+    if (p) return setMsg("saveMsg", p, false);
+    btn.disabled = true; setMsg("saveMsg", "저장하는 중이에요…", true);
+    admin("saveContent", { content: d }).then(function (res) {
+      btn.disabled = false;
+      if (res.ok) { content = clone(d); setMsg("saveMsg", "저장했어요. 학생 화면에 바로 반영돼요.", true); }
+      else setMsg("saveMsg", errText(res), false);
+    }, function () { btn.disabled = false; setMsg("saveMsg", errText(null), false); });
+  }
+  function download(d) {
+    var cfg = { apiUrl: C0.apiUrl || "", eventTitle: d.eventTitle, cafeName: d.cafeName, staffPin: String(C0.staffPin || ""), coupons: d.coupons, stations: d.stations };
+    var text = "/* 관리자 모드에서 만든 설정 파일입니다. 이 파일로 기존 config.js를 바꿔 주세요. */\nwindow.CONFIG = " + JSON.stringify(cfg, null, 2) + ";\n";
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([text], { type: "text/javascript" }));
+    a.download = "config.js";
+    document.body.appendChild(a); a.click(); a.remove();
+  }
+
+  /* ---------- QR 인쇄 ---------- */
+  function defaultBase() { return location.href.split("#")[0].split("?")[0].replace(/admin\.html$/, ""); }
+  function poster(c, num, place, url, say, code) {
+    return '<article class="poster"><div class="top">' + esc(c.eventTitle) + '</div><div class="num">' + esc(num) +
+      '</div><div class="place">' + esc(place) + '</div><div class="qr">' + QR.svg(url, esc(place) + " QR 코드") + "</div>" +
+      '<div class="say">' + say + "</div>" +
+      (code ? '<div class="code">QR을 찍기 어렵다면 코드 입력 <b>' + esc(code) + "</b></div>" : "") +
+      '<div class="foot">' + esc(c.cafeName) + "</div></article>";
+  }
+  function renderQR() {
+    var c = live();
+    panel.innerHTML = '<section class="card"><label for="base">학생용 앱 주소</label><input id="base" type="url" spellcheck="false">' +
+      '<p class="msg bad" id="warn" hidden>이 주소는 이 컴퓨터에서만 열려요. 인터넷에 올린 뒤 받은 주소를 넣어야 학생 휴대폰에서 QR이 열려요.</p>' +
+      '<div class="row" style="margin-top:.75rem"><button type="button" class="btn" id="print">포스터 인쇄하기</button></div>' +
+      '<p class="note" style="margin:.5rem 0 0">' + (API ? "서버에 저장된 문제" : "config.js의 문제") + "로 만든 포스터예요. 문제를 고쳤다면 저장한 뒤 인쇄해 주세요.</p></section>" +
+      '<section class="card"><details><summary><b>정답표 보기</b></summary><div class="tablewrap"><table><thead><tr><th>장소</th><th>코드</th><th>문제</th><th>정답</th></tr></thead><tbody>' +
+      c.stations.map(function (s) {
+        return "<tr><td>" + esc(s.place) + "</td><td>" + esc(s.code) + "</td><td>" + esc(s.question) + "</td><td>" + s.answer + "번. " + esc(s.choices[s.answer - 1]) + "</td></tr>";
+      }).join("") + "</tbody></table></div></details></section><div class=\"sheets\" id=\"sheets\"></div>";
+
+    var base = document.getElementById("base");
+    base.value = ls(BASE_KEY) || defaultBase();
+    var draw = function () {
+      var b = base.value.trim();
+      document.getElementById("warn").hidden = /^https?:\/\/(?!localhost|127\.|192\.168\.|10\.)/i.test(b);
+      var html = poster(c, "시작", "참여 안내", b + "#home", "카메라로 찍고<br>내 스탬프 판을 열어요", "");
+      c.stations.forEach(function (s, i) {
+        html += poster(c, (i + 1) + "번 문제", s.place, b + "#" + s.code, "카메라로 찍고<br>문제를 풀어요", s.code);
+      });
+      document.getElementById("sheets").innerHTML = html;
+    };
+    base.addEventListener("input", function () { ls(BASE_KEY, base.value.trim()); draw(); });
+    document.getElementById("print").addEventListener("click", function () { window.print(); });
+    draw();
+  }
+
+  /* ---------- 초기화 ---------- */
+  function renderEtc() {
+    panel.innerHTML =
+      '<section class="card"><h2>이 기기의 풀이 기록 지우기</h2><p>이 브라우저에 저장된 문제 풀이와 쿠폰만 지워요. 미리 테스트해 본 휴대폰이나 컴퓨터에서 써 주세요.</p>' +
+      '<button type="button" class="btn ghost" id="local">이 기기 기록 지우기</button><p class="msg" id="localMsg" role="status"></p></section>' +
+      (API ? '<section class="card"><h2>전체 기록 초기화</h2><p>서버에 쌓인 <b>모든 학생의 풀이 기록과 쿠폰</b>을 지워요. 문제와 비밀번호는 그대로 남아요. 지운 기록은 되살릴 수 없어요.</p>' +
+        '<p>축제 전에 테스트 기록을 지울 때만 써 주세요. 학생 휴대폰에 남은 기록은 지워지지 않아요.</p>' +
+        '<label for="confirmIn">확인을 위해 ‘초기화’라고 입력해 주세요</label><div class="row"><div class="grow"><input id="confirmIn" autocomplete="off"></div>' +
+        '<button type="button" class="btn danger" id="reset">전체 기록 지우기</button></div><p class="msg" id="resetMsg" role="status"></p></section>' : "") +
+      (API ? '<section class="card"><h2>로그아웃</h2><button type="button" class="btn ghost" id="logout">로그아웃</button></section>' : "");
+
+    document.getElementById("local").addEventListener("click", function () {
+      ls("bf-quest-v1", null); ls("bf-quest-content", null);
+      setMsg("localMsg", "이 기기의 기록을 지웠어요.", true);
+    });
+    if (!API) return;
+    document.getElementById("reset").addEventListener("click", function () {
+      if (document.getElementById("confirmIn").value.trim() !== "초기화") return setMsg("resetMsg", "‘초기화’라고 정확히 입력해 주세요.", false);
+      var btn = this; btn.disabled = true;
+      admin("reset").then(function (res) {
+        btn.disabled = false;
+        if (res.ok) { document.getElementById("confirmIn").value = ""; setMsg("resetMsg", "모든 풀이 기록과 쿠폰을 지웠어요.", true); }
+        else setMsg("resetMsg", errText(res), false);
+      }, function () { btn.disabled = false; setMsg("resetMsg", errText(null), false); });
+    });
+    document.getElementById("logout").addEventListener("click", function () {
+      ss(PIN_KEY, null); pin = ""; draft = null; location.reload();
+    });
+  }
+
+  /* ---------- 시작 ---------- */
+  var mode = document.getElementById("mode");
+  mode.textContent = API ? "구글 시트 서버 연결" : "서버 없이 사용 중";
+  mode.className = "badge " + (API ? "on" : "off");
+  if (!API) { startTabs(); return; }
+  var saved = ss(PIN_KEY);
+  if (saved) {
+    panel.innerHTML = "<p>불러오는 중이에요…</p>";
+    login(saved).then(function (msg) { if (msg) showLogin(msg); });
+  } else showLogin();
+})();
+</script>
+</body>
+</html>

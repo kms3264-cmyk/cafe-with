@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>배리어 프리 QR 탐험</title>
+<style>
+  :root {
+    --bg: #fbf6ee; --card: #ffffff; --ink: #2e2019; --soft: #5f4c40; --line: #d9cbb8;
+    --brand: #5b3a29; --brand-ink: #ffffff; --tint: #f1e6d6;
+    --good: #17663a; --good-bg: #e3f3e8; --bad: #a3231b; --bad-bg: #fbe9e7; --focus: #0b57d0;
+  }
+  body.hc {
+    --bg: #000000; --card: #000000; --ink: #ffffff; --soft: #ffffff; --line: #ffffff;
+    --brand: #ffe600; --brand-ink: #000000; --tint: #000000;
+    --good: #7dff9e; --good-bg: #000000; --bad: #ffb4ab; --bad-bg: #000000; --focus: #00e5ff;
+  }
+  html { font-size: 100%; -webkit-text-size-adjust: 100%; }
+  html.size-1 { font-size: 118%; }
+  html.size-2 { font-size: 136%; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink); line-height: 1.6; word-break: keep-all;
+    font-family: "Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", system-ui, sans-serif;
+  }
+  .bar {
+    display: flex; gap: .5rem; justify-content: flex-end; flex-wrap: wrap;
+    padding: .5rem .75rem; background: var(--card); border-bottom: 1px solid var(--line);
+  }
+  .bar button {
+    min-height: 44px; padding: .25rem .75rem; font: inherit; font-size: .95rem; font-weight: 600;
+    color: var(--ink); background: transparent; border: 2px solid var(--line); border-radius: 10px; cursor: pointer;
+  }
+  .bar button[aria-pressed="true"] { background: var(--brand); color: var(--brand-ink); border-color: var(--brand); }
+  main { max-width: 34rem; margin: 0 auto; padding: 1.25rem 1rem 3rem; }
+  h1 { font-size: 1.7rem; line-height: 1.3; margin: .25rem 0 .75rem; outline: none; }
+  h2 { font-size: 1.2rem; margin: 0 0 .5rem; }
+  p { margin: 0 0 .75rem; }
+  .eyebrow { color: var(--soft); font-weight: 700; margin: 0; }
+  .card {
+    background: var(--card); border: 1px solid var(--line); border-radius: 16px;
+    padding: 1rem; margin: 1rem 0;
+  }
+  .btn {
+    display: flex; align-items: center; justify-content: center; gap: .4rem; width: 100%; min-height: 56px;
+    padding: .6rem 1rem; font: inherit; font-size: 1.1rem; font-weight: 700; text-align: center; text-decoration: none;
+    color: var(--brand-ink); background: var(--brand); border: 2px solid var(--brand); border-radius: 14px; cursor: pointer;
+  }
+  .btn.ghost { color: var(--ink); background: transparent; border-color: var(--line); }
+  .btn + .btn { margin-top: .6rem; }
+  :focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+  h1:focus-visible { outline: none; }
+
+  .steps { margin: 0; padding-left: 1.4rem; }
+  .steps li { margin-bottom: .25rem; }
+  .score { display: flex; gap: .75rem; }
+  .score div { flex: 1; text-align: center; background: var(--tint); border: 1px solid var(--line); border-radius: 12px; padding: .5rem; }
+  .score b { display: block; font-size: 1.7rem; line-height: 1.2; }
+
+  .stamps { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: .5rem; }
+  html.size-2 .stamps { grid-template-columns: repeat(2, 1fr); }
+  .stamp {
+    display: flex; flex-direction: column; align-items: center; text-align: center; gap: .1rem;
+    padding: .6rem .25rem; border: 2px dashed var(--line); border-radius: 14px; font-size: .9rem; font-weight: 600;
+  }
+  .stamp .ic { font-size: 1.6rem; line-height: 1.3; }
+  .stamp .st { font-weight: 700; color: var(--soft); }
+  .stamp.good { border: 2px solid var(--good); background: var(--good-bg); }
+  .stamp.good .st { color: var(--good); }
+  .stamp.bad { border: 2px solid var(--bad); background: var(--bad-bg); }
+  .stamp.bad .st { color: var(--bad); }
+
+  .tiers { list-style: none; margin: 0 0 .75rem; padding: 0; }
+  .tiers li { display: flex; gap: .5rem; padding: .3rem 0; border-bottom: 1px solid var(--line); }
+  .tiers li:last-child { border-bottom: 0; }
+  .tiers .need { margin-left: auto; font-weight: 700; white-space: nowrap; }
+
+  fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }
+  legend { padding: 0; font-size: 1.35rem; font-weight: 700; line-height: 1.45; margin-bottom: .75rem; }
+  .choice {
+    display: flex; align-items: center; gap: .75rem; min-height: 60px; padding: .6rem .8rem; margin-bottom: .6rem;
+    font-size: 1.1rem; background: var(--card); border: 2px solid var(--line); border-radius: 14px; cursor: pointer;
+  }
+  .choice input { width: 1.5rem; height: 1.5rem; flex: none; margin: 0; accent-color: var(--brand); }
+  .choice:has(input:checked) { border-color: var(--brand); border-width: 3px; background: var(--tint); font-weight: 700; }
+  .note { color: var(--soft); font-size: .95rem; }
+  .err { color: var(--bad); font-weight: 700; }
+
+  .verdict { border-radius: 16px; padding: 1rem; margin: 1rem 0; border: 3px solid; text-align: center; }
+  .verdict.good { border-color: var(--good); background: var(--good-bg); color: var(--good); }
+  .verdict.bad { border-color: var(--bad); background: var(--bad-bg); color: var(--bad); }
+  .verdict .big { font-size: 3rem; line-height: 1.2; }
+  .verdict strong { display: block; font-size: 1.5rem; }
+
+  .coupon { text-align: center; border-radius: 20px; padding: 1.25rem 1rem; margin: 1rem 0; border: 6px solid var(--tier); background: var(--card); }
+  .coupon.gold { --tier: #b8860b; } .coupon.silver { --tier: #6e7780; } .coupon.bronze { --tier: #a0602d; }
+  body.hc .coupon { --tier: #ffffff; }
+  .coupon .medal { font-size: 4.5rem; line-height: 1.15; }
+  .coupon .name { font-size: 2rem; font-weight: 800; line-height: 1.25; }
+  .coupon .benefit { font-size: 1.5rem; font-weight: 700; margin: .25rem 0 .5rem; }
+  .coupon .code { font-size: 1.2rem; font-weight: 700; letter-spacing: .08em; }
+  .live { display: flex; align-items: center; justify-content: center; gap: .5rem; font-size: 1.2rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .dot { width: .9rem; height: .9rem; border-radius: 50%; background: var(--good); animation: blink 1s infinite; }
+  @keyframes blink { 50% { opacity: .15; } }
+  .used { display: inline-block; font-size: 1.7rem; font-weight: 800; color: var(--bad); border: 4px solid var(--bad); border-radius: 12px; padding: .1rem 1rem; margin: .5rem 0; transform: rotate(-4deg); }
+  .pin { width: 100%; min-height: 60px; font: inherit; font-size: 1.6rem; text-align: center; letter-spacing: .4em; color: var(--ink); background: var(--card); border: 2px solid var(--line); border-radius: 14px; margin-bottom: .6rem; }
+  .codein { display: flex; gap: .5rem; }
+  .codein input { flex: 1; min-width: 0; min-height: 56px; padding: 0 .75rem; font: inherit; font-size: 1.2rem; text-transform: uppercase; color: var(--ink); background: var(--card); border: 2px solid var(--line); border-radius: 14px; }
+  .codein .btn { width: auto; flex: none; margin: 0; }
+  label.lbl { display: block; font-weight: 700; margin-bottom: .35rem; }
+  @media (prefers-reduced-motion: reduce) { .dot { animation: none; } }
+</style>
+</head>
+<body>
+<div class="bar" role="group" aria-label="화면 설정">
+  <button type="button" id="sizeBtn"></button>
+  <button type="button" id="hcBtn" aria-pressed="false">고대비</button>
+</div>
+<main id="app"><noscript>이 앱은 자바스크립트를 켜야 사용할 수 있어요.</noscript></main>
+<script src="config.js"></script>
+<script>
+(function () {
+  var C = window.CONFIG, app = document.getElementById("app");
+  var KEY = "bf-quest-v1", PREF = "bf-quest-prefs", clock = null, storageOk = true;
+  var SIZE_NAMES = ["보통", "크게", "아주 크게"];
+
+  function read(k, fallback) {
+    try { var v = localStorage.getItem(k); return v ? JSON.parse(v) : fallback; }
+    catch (e) { storageOk = false; return fallback; }
+  }
+  function write(k, v) {
+    try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { storageOk = false; }
+  }
+  var state = read(KEY, { answers: {}, coupon: null });
+  var prefs = read(PREF, { size: 0, hc: false });
+  function save() { write(KEY, state); }
+
+  /* ---- 구글 시트 서버 연결 (config.js 의 apiUrl 이 있을 때만) ---- */
+  var API = String(C.apiUrl || "").trim(), CONTENT_KEY = "bf-quest-content", flushing = false;
+  if (!state.player) { state.player = "P" + Date.now().toString(36) + Math.random().toString(36).slice(2, 8); save(); }
+  if (!state.pending) state.pending = [];
+  function useContent(ct) {
+    if (ct && ct.stations && ct.stations.length) C = Object.assign({}, window.CONFIG, ct);
+  }
+  function request(url, opt) {
+    var ctrl = window.AbortController ? new AbortController() : null;
+    var timer = setTimeout(function () { if (ctrl) ctrl.abort(); }, 15000);
+    if (ctrl) opt.signal = ctrl.signal;
+    return fetch(url, opt).then(function (r) { clearTimeout(timer); return r.json(); },
+      function (e) { clearTimeout(timer); throw e; });
+  }
+  function apiGet(params) {
+    return request(API + (API.indexOf("?") < 0 ? "?" : "&") + new URLSearchParams(params), { method: "GET" });
+  }
+  function apiPost(body) { return request(API, { method: "POST", body: JSON.stringify(body) }); }
+  // 문제 결과를 서버로 보냅니다. 인터넷이 끊기면 모아 두었다가 다음에 보냅니다.
+  function flush() {
+    if (!API || flushing || !state.pending.length) return Promise.resolve();
+    flushing = true;
+    var item = state.pending[0];
+    return apiPost({ action: "answer", player: state.player, code: item.code, choice: item.choice })
+      .then(function (res) {
+        flushing = false;
+        if (res.ok || res.error === "unknown_code") { state.pending.shift(); save(); return flush(); }
+      }, function () { flushing = false; });
+  }
+  function couponFromServer(c) {
+    return { tier: c.tierId, name: c.tierName, benefit: c.benefit, correct: c.correct,
+      code: c.no, issuedAt: c.issuedAt, usedAt: c.usedAt };
+  }
+
+  function esc(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+  function findStation(code) {
+    return C.stations.filter(function (s) { return s.code === code; })[0];
+  }
+  function answeredCount() { return Object.keys(state.answers).length; }
+  function correctCount() {
+    return Object.keys(state.answers).filter(function (k) { return state.answers[k].correct; }).length;
+  }
+  function tierFor(n) { return C.coupons.filter(function (t) { return n >= t.min; })[0] || null; }
+  function tierById(id) { return C.coupons.filter(function (t) { return t.id === id; })[0]; }
+  function nextTier(n) {
+    return C.coupons.slice().reverse().filter(function (t) { return t.min > n; })[0] || null;
+  }
+  function timeText(ms) {
+    return new Date(ms).toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  }
+
+  /* ---- 소리로 듣기 ---- */
+  var canSpeak = "speechSynthesis" in window;
+  function stopSpeaking() { if (canSpeak) speechSynthesis.cancel(); }
+  function speak(text) {
+    if (!canSpeak) return;
+    var wasSpeaking = speechSynthesis.speaking;
+    speechSynthesis.cancel();
+    if (wasSpeaking) return;
+    var u = new SpeechSynthesisUtterance(text);
+    u.lang = "ko-KR"; u.rate = 0.95;
+    speechSynthesis.speak(u);
+  }
+  function speakButton() {
+    return canSpeak ? '<button type="button" class="btn ghost" id="speak"><span aria-hidden="true">🔊</span> 소리로 듣기</button>' : "";
+  }
+  function bindSpeak(text) {
+    var b = document.getElementById("speak");
+    if (b) b.addEventListener("click", function () { speak(text); });
+  }
+
+  /* ---- 화면 설정 ---- */
+  function applyPrefs() {
+    document.documentElement.className = "size-" + prefs.size;
+    document.body.classList.toggle("hc", prefs.hc);
+    document.getElementById("sizeBtn").textContent = "글자 크기: " + SIZE_NAMES[prefs.size];
+    document.getElementById("hcBtn").setAttribute("aria-pressed", String(prefs.hc));
+  }
+  document.getElementById("sizeBtn").addEventListener("click", function () {
+    prefs.size = (prefs.size + 1) % 3; write(PREF, prefs); applyPrefs();
+  });
+  document.getElementById("hcBtn").addEventListener("click", function () {
+    prefs.hc = !prefs.hc; write(PREF, prefs); applyPrefs();
+  });
+
+  /* ---- 화면들 ---- */
+  function viewHome() {
+    var correct = correctCount(), done = answeredCount(), total = C.stations.length;
+    var tier = tierFor(correct), next = nextTier(correct), lowest = C.coupons[C.coupons.length - 1];
+    var action;
+    if (state.coupon) {
+      action = '<a class="btn" href="#coupon">내 쿠폰 보기</a>';
+    } else if (tier) {
+      action = "<p>지금 <strong>" + esc(tier.name) + "</strong>을 받을 수 있어요." +
+        (next ? " " + (next.min - correct) + "개 더 맞히면 " + esc(next.name) + "이에요." : "") + "</p>" +
+        '<a class="btn" href="#confirm">쿠폰 받기</a>';
+    } else if (correct + total - done < lowest.min) {
+      action = "<p>틀린 문제가 있어서 이번에는 쿠폰을 받을 수 없어요. 끝까지 도전해 줘서 고마워요!</p>";
+    } else {
+      action = "<p>" + (lowest.min - correct) + "개 더 맞히면 쿠폰을 받을 수 있어요.</p>";
+    }
+
+    var stamps = C.stations.map(function (s) {
+      var a = state.answers[s.code];
+      var cls = a ? (a.correct ? "good" : "bad") : "";
+      var st = a ? (a.correct ? "⭕ 맞혔어요" : "❌ 틀렸어요") : "아직이에요";
+      return '<li class="stamp ' + cls + '"><span class="ic" aria-hidden="true">' + esc(s.icon) + "</span>" +
+        "<span>" + esc(s.place) + '</span><span class="st">' + st + "</span></li>";
+    }).join("");
+
+    var tiers = C.coupons.map(function (t) {
+      return '<li><span aria-hidden="true">' + esc(t.icon) + "</span><span>" + esc(t.name) + "<br>" + esc(t.benefit) +
+        '</span><span class="need">' + (t.min === total ? total + "개 모두 정답" : t.min + "개 이상") + "</span></li>";
+    }).join("");
+
+    app.innerHTML =
+      '<p class="eyebrow">' + esc(C.cafeName) + "</p>" +
+      "<h1 tabindex=\"-1\">" + esc(C.eventTitle) + "</h1>" +
+      (storageOk ? "" : '<p class="err">이 브라우저에는 기록이 저장되지 않아요. 다른 브라우저로 열어 주세요.</p>') +
+      (done === 0 ? '<section class="card"><h2>이렇게 해요</h2><ol class="steps">' +
+        "<li>학교 곳곳의 QR 코드를 찾아요.</li><li>휴대폰 카메라로 찍고 문제를 풀어요.</li>" +
+        "<li>" + (lowest.min === total ? total + "문제를 모두 맞히면 쿠폰을 받아요." : "맞힌 개수에 따라 쿠폰을 받아요.") + "</li><li>" + esc(C.cafeName) + "에서 쿠폰을 보여 줘요.</li></ol>" +
+        '<p class="note" style="margin:.5rem 0 0">문제는 한 번만 풀 수 있어요.</p></section>' : "") +
+      '<section class="card" aria-label="내 점수"><div class="score">' +
+      "<div><b>" + done + " / " + total + "</b>푼 문제</div><div><b>" + correct + "</b>맞힌 문제</div></div></section>" +
+      '<section class="card"><h2>내 쿠폰</h2>' + action + "</section>" +
+      '<section class="card"><h2>스탬프 판</h2><ul class="stamps">' + stamps + "</ul></section>" +
+      '<section class="card"><h2>쿠폰 기준</h2><ul class="tiers">' + tiers + "</ul></section>" +
+      '<section class="card"><form id="codeForm"><label class="lbl" for="codeIn">QR을 찍기 어렵다면 포스터의 코드를 입력하세요</label>' +
+      '<div class="codein"><input id="codeIn" autocomplete="off" autocapitalize="characters" maxlength="4" placeholder="예: AB12">' +
+      '<button class="btn" type="submit">열기</button></div></form></section>';
+
+    document.getElementById("codeForm").addEventListener("submit", function (e) {
+      e.preventDefault();
+      var v = document.getElementById("codeIn").value.trim().toUpperCase();
+      if (v) go(v);
+    });
+  }
+
+  function viewQuestion(s) {
+    var n = C.stations.indexOf(s) + 1;
+    var choices = s.choices.map(function (c, i) {
+      return '<label class="choice"><input type="radio" name="c" value="' + (i + 1) + '"><span>' + esc(c) + "</span></label>";
+    }).join("");
+    app.innerHTML =
+      '<p class="eyebrow">' + n + "번 문제 · " + esc(s.place) + "</p>" +
+      '<h1 tabindex="-1"><span aria-hidden="true">' + esc(s.icon) + "</span> " + esc(s.place) + " 문제</h1>" +
+      '<form id="qForm"><div class="card"><fieldset><legend>' + esc(s.question) + "</legend>" + choices + "</fieldset></div>" +
+      '<p class="err" id="qErr" role="alert"></p>' +
+      '<button class="btn" type="submit">정답 확인</button></form><div style="height:.6rem"></div>' + speakButton() +
+      '<p class="note" style="margin-top:.75rem">문제는 한 번만 풀 수 있어요. 고른 답을 확인하고 눌러 주세요.</p>';
+
+    var spoken = s.question + " " + s.choices.map(function (c, i) { return (i + 1) + "번, " + c + "."; }).join(" ");
+    bindSpeak(spoken);
+    document.getElementById("qForm").addEventListener("submit", function (e) {
+      e.preventDefault();
+      var picked = this.querySelector("input:checked");
+      if (!picked) { document.getElementById("qErr").textContent = "답을 하나 골라 주세요."; return; }
+      var choice = Number(picked.value);
+      state.answers[s.code] = { choice: choice, correct: choice === Number(s.answer), at: Date.now() };
+      if (API) state.pending.push({ code: s.code, choice: choice });
+      save();
+      render();
+      flush();
+    });
+  }
+
+  function viewResult(s) {
+    var a = state.answers[s.code];
+    app.innerHTML =
+      '<p class="eyebrow">' + esc(s.place) + "</p>" +
+      '<h1 tabindex="-1">' + (a.correct ? "정답이에요!" : "아쉬워요, 오답이에요") + "</h1>" +
+      '<div class="verdict ' + (a.correct ? "good" : "bad") + '"><div class="big" aria-hidden="true">' + (a.correct ? "⭕" : "❌") + "</div>" +
+      "<strong>" + (a.correct ? "맞혔어요" : "틀렸어요") + "</strong></div>" +
+      '<section class="card"><p><strong>문제</strong><br>' + esc(s.question) + "</p>" +
+      (a.correct ? "" : "<p><strong>내가 고른 답</strong><br>" + esc(s.choices[a.choice - 1]) + "</p>") +
+      "<p><strong>정답</strong><br>" + esc(s.choices[s.answer - 1]) + "</p>" +
+      '<p style="margin:0"><strong>알아 두기</strong><br>' + esc(s.explain) + "</p></section>" +
+      '<a class="btn" href="#home">스탬프 판 보기</a><div style="height:.6rem"></div>' + speakButton();
+    bindSpeak((a.correct ? "정답이에요. " : "오답이에요. 정답은 " + s.choices[s.answer - 1] + " 입니다. ") + s.explain);
+  }
+
+  function viewClosed(s) {
+    app.innerHTML =
+      '<h1 tabindex="-1">쿠폰을 이미 받았어요</h1>' +
+      '<section class="card"><p>쿠폰을 받은 뒤에는 ' + esc(s.place) + " 문제를 풀 수 없어요.</p></section>" +
+      '<a class="btn" href="#coupon">내 쿠폰 보기</a>';
+  }
+
+  function viewNotFound() {
+    app.innerHTML =
+      '<h1 tabindex="-1">문제를 찾을 수 없어요</h1>' +
+      '<section class="card"><p>QR 코드를 다시 찍거나 코드를 다시 입력해 주세요.</p></section>' +
+      '<a class="btn" href="#home">처음으로</a>';
+  }
+
+  function viewConfirm() {
+    if (state.coupon) return go("coupon");
+    var correct = correctCount(), tier = tierFor(correct), left = C.stations.length - answeredCount();
+    if (!tier) return go("home");
+    app.innerHTML =
+      '<h1 tabindex="-1">' + esc(tier.name) + "을 받을까요?</h1>" +
+      '<section class="card"><p>맞힌 문제: <strong>' + correct + "개</strong></p><p>혜택: <strong>" + esc(tier.benefit) + "</strong></p>" +
+      (left > 0 ? '<p class="err" style="margin:0">아직 ' + left + "문제가 남았어요. 쿠폰을 받으면 더 풀 수 없어요.</p>" : "") + "</section>" +
+      '<p class="err" id="issueErr" role="alert"></p>' +
+      '<button type="button" class="btn" id="issue">네, 쿠폰 받기</button>' +
+      '<a class="btn ghost" href="#home">' + (left > 0 ? "문제 더 풀기" : "돌아가기") + "</a>";
+    document.getElementById("issue").addEventListener("click", function () {
+      var btn = this, err = document.getElementById("issueErr");
+      if (API) {
+        btn.disabled = true; btn.textContent = "쿠폰을 만드는 중이에요…"; err.textContent = "";
+        var fail = function (msg) { btn.disabled = false; btn.textContent = "네, 쿠폰 받기"; err.textContent = msg; };
+        flush().then(function () {
+          if (state.pending.length) throw new Error("offline");
+          return apiPost({ action: "issue", player: state.player });
+        }).then(function (res) {
+          if (res.ok) { state.coupon = couponFromServer(res.coupon); save(); go("coupon"); }
+          else if (res.error === "not_enough") fail("서버 기록과 맞지 않아요. 선생님께 이 화면을 보여 주세요.");
+          else fail("잠시 뒤에 다시 눌러 주세요.");
+        }, function () { fail("인터넷 연결을 확인하고 다시 눌러 주세요."); });
+        return;
+      }
+      state.coupon = {
+        tier: tier.id, correct: correct, issuedAt: Date.now(), usedAt: null,
+        code: "BF-" + String(Math.floor(1000 + Math.random() * 9000))
+      };
+      save();
+      go("coupon");
+    });
+  }
+
+  function viewCoupon() {
+    var c = state.coupon;
+    if (!c) return go("home");
+    var base = tierById(c.tier) || { id: "", name: "쿠폰", icon: "🎟️", benefit: "" };
+    var t = { id: base.id, icon: base.icon, name: c.name || base.name, benefit: c.benefit || base.benefit };
+    var body =
+      '<div class="medal" aria-hidden="true">' + esc(t.icon) + "</div>" +
+      '<div class="name">' + esc(t.name) + '</div><div class="benefit">' + esc(t.benefit) + "</div>" +
+      '<div class="code">쿠폰 번호 ' + esc(c.code) + "</div>";
+
+    if (c.usedAt) {
+      app.innerHTML =
+        '<h1 tabindex="-1">사용한 쿠폰이에요</h1>' +
+        '<div class="coupon ' + esc(t.id) + '">' + body + '<div class="used">사용 완료</div>' +
+        "<p style=\"margin:0\">" + timeText(c.usedAt) + "에 사용했어요</p></div>" +
+        '<section class="card"><p style="margin:0">참여해 줘서 고마워요. ' + esc(C.cafeName) + "에서 맛있게 드세요!</p></section>" +
+        '<a class="btn ghost" href="#home">스탬프 판 보기</a>';
+      return;
+    }
+
+    app.innerHTML =
+      '<h1 tabindex="-1">바리스타에게 이 화면을 보여 주세요</h1>' +
+      '<div class="coupon ' + esc(t.id) + '">' + body +
+      '<div class="live" style="margin-top:.5rem"><span class="dot" aria-hidden="true"></span><span id="now"></span></div></div>' +
+      '<section class="card"><h2>바리스타 확인</h2><ol class="steps">' +
+      "<li>시계가 움직이는지 봐요.</li><li>쿠폰 이름을 확인해요.</li><li>비밀번호를 눌러요.</li></ol></section>" +
+      '<form id="pinForm"><label class="lbl" for="pin">바리스타 비밀번호</label>' +
+      '<input class="pin" id="pin" type="password" inputmode="numeric" autocomplete="off">' +
+      '<p class="err" id="pinErr" role="alert"></p>' +
+      '<button class="btn" type="submit">쿠폰 사용하기</button></form><div style="height:.6rem"></div>' +
+      '<a class="btn ghost" href="#home">스탬프 판 보기</a>';
+
+    var now = document.getElementById("now");
+    function tick() { now.textContent = timeText(Date.now()); }
+    tick(); clock = setInterval(tick, 1000);
+
+    if (API) {
+      // 관리자 화면에서 사용 처리했는지 확인합니다.
+      apiGet({ action: "coupon", player: state.player }).then(function (res) {
+        if (res.ok && res.coupon && res.coupon.usedAt && !c.usedAt && location.hash.slice(1) === "coupon") {
+          c.usedAt = res.coupon.usedAt; save(); render();
+        }
+      }, function () {});
+    }
+
+    document.getElementById("pinForm").addEventListener("submit", function (e) {
+      e.preventDefault();
+      var pin = document.getElementById("pin"), err = document.getElementById("pinErr");
+      if (API) {
+        var btn = this.querySelector("button");
+        btn.disabled = true; err.textContent = "";
+        apiPost({ action: "redeem", no: c.code, pin: pin.value }).then(function (res) {
+          btn.disabled = false;
+          if (res.ok || res.error === "used") {
+            c.usedAt = (res.coupon && res.coupon.usedAt) || Date.now(); save(); render();
+          } else {
+            pin.value = ""; pin.focus();
+            err.textContent = res.error === "wrong_pin" ? "비밀번호가 달라요. 다시 눌러 주세요." :
+              res.error === "no_coupon" ? "등록되지 않은 쿠폰이에요. 선생님께 보여 주세요." : "잠시 뒤에 다시 눌러 주세요.";
+          }
+        }, function () { btn.disabled = false; err.textContent = "인터넷 연결을 확인하고 다시 눌러 주세요."; });
+        return;
+      }
+      if (pin.value === String(C.staffPin)) {
+        c.usedAt = Date.now(); save(); render();
+      } else {
+        pin.value = ""; pin.focus();
+        document.getElementById("pinErr").textContent = "비밀번호가 달라요. 다시 눌러 주세요.";
+      }
+    });
+  }
+
+  /* ---- 화면 이동 ---- */
+  function go(name) {
+    if (location.hash.slice(1) === name) render(); else location.hash = name;
+  }
+  function render() {
+    clearInterval(clock); stopSpeaking();
+    var h = decodeURIComponent(location.hash.slice(1)).trim();
+    var key = h.toUpperCase(), s = findStation(key);
+    if (!h || key === "HOME") viewHome();
+    else if (key === "COUPON") viewCoupon();
+    else if (key === "CONFIRM") viewConfirm();
+    else if (!s) viewNotFound();
+    else if (state.answers[s.code]) viewResult(s);
+    else if (state.coupon) viewClosed(s);
+    else viewQuestion(s);
+
+    window.scrollTo(0, 0);
+    var title = app.querySelector("h1");
+    if (title) { title.focus({ preventScroll: true }); document.title = title.textContent.trim() + " - " + C.eventTitle; }
+  }
+
+  applyPrefs();
+  window.addEventListener("hashchange", render);
+
+  if (!API) { render(); return; }
+
+  // 서버에서 최신 문제를 받아 옵니다. 받아 둔 문제가 있으면 먼저 보여 주고 뒤에서 새로 받습니다.
+  var cached = read(CONTENT_KEY, null);
+  if (cached) { useContent(cached); render(); }
+  else app.innerHTML = '<h1 tabindex="-1">불러오는 중이에요…</h1>';
+  apiGet({ action: "content" }).then(function (res) {
+    if (!res.ok) throw new Error(res.error);
+    var fresh = res.content && res.content.stations && res.content.stations.length ? res.content : null;
+    if (fresh) write(CONTENT_KEY, fresh);
+    var changed = JSON.stringify(fresh) !== JSON.stringify(cached);
+    if (fresh) useContent(fresh);
+    // 문제를 고르는 중이면 화면을 바꾸지 않습니다.
+    if (!cached || (changed && !document.querySelector("#qForm input:checked"))) render();
+  }).catch(function () {
+    if (!cached) render();
+  }).then(flush);
+})();
+</script>
+</body>
+</html>

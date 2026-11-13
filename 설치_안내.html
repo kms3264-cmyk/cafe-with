@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>설치 안내</title>
+<style>
+  body { margin: 0; background: #f4efe7; color: #2e2019; line-height: 1.7; word-break: keep-all;
+    font-family: "Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", system-ui, sans-serif; }
+  main { max-width: 46rem; margin: 0 auto; padding: 1.5rem 1rem 3rem; }
+  h1 { font-size: 1.7rem; margin: 0 0 .5rem; }
+  h2 { font-size: 1.25rem; margin: 0 0 .5rem; }
+  section { background: #fff; border: 1px solid #d9cbb8; border-radius: 14px; padding: 1rem 1.25rem; margin: 1rem 0; }
+  ol { padding-left: 1.4rem; margin: .25rem 0; }
+  li { margin-bottom: .4rem; }
+  code { background: #f1e6d6; padding: .05rem .35rem; border-radius: 6px; font-size: .95em; }
+  .warn { color: #a3231b; font-weight: 700; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { text-align: left; padding: .4rem; border-bottom: 1px solid #e5d9c8; vertical-align: top; }
+</style>
+</head>
+<body>
+<main>
+  <h1>설치 안내</h1>
+  <p>참여 현황과 쿠폰 관리를 쓰려면 구글 스프레드시트를 서버로 연결해요. 처음 한 번만 하면 되고 20분쯤 걸려요. 서버 없이 쓰려면 2번 단계만 하면 돼요.</p>
+
+  <section>
+    <h2>폴더에 있는 파일</h2>
+    <table>
+      <tr><th>파일</th><th>하는 일</th></tr>
+      <tr><td><code>index.html</code></td><td>학생용 문제 풀이 앱</td></tr>
+      <tr><td><code>admin.html</code></td><td>관리자 모드 (참여 현황, 쿠폰 관리, 문제 수정, QR 인쇄, 초기화)</td></tr>
+      <tr><td><code>config.js</code></td><td>서버 주소와 기본 문제</td></tr>
+      <tr><td><code>qr.js</code></td><td>QR 코드 만들기</td></tr>
+      <tr><td><code>Code.gs</code></td><td>구글 시트 서버 코드 (인터넷에 올리지 않아요)</td></tr>
+    </table>
+  </section>
+
+  <section>
+    <h2>1. 구글 시트 서버 만들기</h2>
+    <ol>
+      <li>구글 드라이브에서 새 스프레드시트를 만들어요. 이름 예: <code>카페 WITH 관리</code></li>
+      <li>메뉴에서 <b>확장 프로그램 → Apps Script</b>를 눌러요.</li>
+      <li>편집기에 있는 내용을 모두 지우고 <code>Code.gs</code> 파일 내용을 붙여 넣은 뒤 저장해요.</li>
+      <li>위쪽의 함수 선택 칸에서 <code>setup</code>을 고르고 <b>실행</b>을 눌러요. 권한을 묻는 창이 나오면 내 계정을 고르고 허용해요. ‘확인되지 않은 앱’ 경고가 나오면 <b>고급 → 이동</b>을 누르면 돼요. 내가 만든 코드라서 괜찮아요.</li>
+      <li>스프레드시트로 돌아가면 <b>설정 · 기록 · 쿠폰</b> 탭이 생겨 있어요. <b>설정</b> 탭의 <code>adminPin</code>(관리자 비밀번호, 처음 값 1234)을 꼭 바꿔 주세요.</li>
+      <li>Apps Script에서 <b>배포 → 새 배포</b>를 누르고 유형을 <b>웹 앱</b>으로 골라요.
+        <ul>
+          <li>다음 사용자 인증 정보로 실행: <b>나</b></li>
+          <li>액세스 권한이 있는 사용자: <b>모든 사용자</b></li>
+        </ul>
+      </li>
+      <li><b>배포</b>를 누르면 나오는 웹 앱 URL(<code>…/exec</code>로 끝나는 주소)을 복사해요.</li>
+      <li><code>config.js</code>를 메모장으로 열어 <code>apiUrl: ""</code>의 따옴표 안에 복사한 주소를 붙여 넣고 저장해요.</li>
+    </ol>
+    <p class="warn">학교 구글 계정에는 ‘모든 사용자’ 항목이 없을 수 있어요. 그럴 때는 개인 구글 계정으로 시트를 만들어 주세요.</p>
+  </section>
+
+  <section>
+    <h2>2. 인터넷에 올리기</h2>
+    <ol>
+      <li><code>index.html</code>, <code>admin.html</code>, <code>config.js</code>, <code>qr.js</code>, <code>설치_안내.html</code>을 Netlify나 GitHub Pages 같은 무료 호스팅에 올려요.</li>
+      <li>올린 뒤 받은 주소로 휴대폰에서 학생용 앱이 열리는지 확인해요.</li>
+    </ol>
+  </section>
+
+  <section>
+    <h2>3. 처음 설정하기</h2>
+    <ol>
+      <li>올린 주소 뒤에 <code>admin.html</code>을 붙여 관리자 모드를 열고, 바꾼 관리자 비밀번호로 들어가요.</li>
+      <li><b>문제 수정</b> 탭에서 문제를 확인하고 <b>서버에 저장</b>을 한 번 눌러요. <span class="warn">저장하기 전에는 학생이 쿠폰을 받을 수 없어요.</span></li>
+      <li>같은 탭에서 바리스타 비밀번호도 정해요.</li>
+      <li><b>QR 인쇄</b> 탭에서 학생용 앱 주소를 확인하고 포스터를 인쇄해요.</li>
+      <li>휴대폰으로 미리 풀어 보고, 축제 전에 <b>초기화</b> 탭에서 테스트 기록을 지워요.</li>
+    </ol>
+  </section>
+
+  <section>
+    <h2>알아 두기</h2>
+    <ul>
+      <li>문제와 쿠폰 기준은 관리자 모드에서 저장하면 바로 반영돼요. 문제를 새로 만들거나 지우면 QR 포스터를 다시 인쇄해 주세요.</li>
+      <li>쿠폰은 서버가 맞힌 개수를 다시 확인한 뒤에 발급해요. 쿠폰 번호마다 한 번만 쓸 수 있어요.</li>
+      <li>바리스타는 학생 휴대폰에 비밀번호를 누르거나, 관리자 모드의 <b>쿠폰 관리</b>에서 쿠폰 번호로 사용 처리할 수 있어요.</li>
+      <li>인터넷이 잠깐 끊겨도 문제 결과는 휴대폰에 모아 두었다가 다시 연결되면 보내요.</li>
+      <li><code>Code.gs</code>를 고친 뒤에는 <b>배포 → 배포 관리 → 수정 → 새 버전</b>으로 다시 배포해야 반영돼요. 주소는 바뀌지 않아요.</li>
+      <li>시트를 직접 고치면 앱이 잘못 동작할 수 있어요. 비밀번호를 바꿀 때 말고는 관리자 모드를 써 주세요.</li>
+    </ul>
+  </section>
+</main>
+</body>
+</html>
